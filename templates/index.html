@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CapCut SRT Auto-Context Translator Agent</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Main CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="background-glob glow-1"></div>
+    <div class="background-glob glow-2"></div>
+
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="brand">
+                <div class="brand-icon">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                </div>
+                <div class="brand-text">
+                    <h1>CapCut & SRT Subtitle Agent</h1>
+                    <p>Hệ thống tự động phân tích ngữ cảnh & Dịch phụ đề AI chuyên nghiệp</p>
+                </div>
+            </div>
+            <div class="header-badges">
+                <span class="badge badge-ai"><i class="fa-solid fa-brain"></i> Gemini 3.1 AI</span>
+                <span class="badge badge-status"><i class="fa-solid fa-circle"></i> Ready</span>
+            </div>
+        </header>
+
+        <!-- Main Grid Layout -->
+        <main class="main-grid">
+            <!-- Left Column: Settings & File Upload -->
+            <section class="card glass-card upload-section">
+                <div class="card-header">
+                    <h2><i class="fa-solid fa-file-import"></i> Đầu Vào & Cấu Hình</h2>
+                </div>
+
+                <form id="translator-form">
+                    <!-- Drop Zone -->
+                    <div class="drop-zone" id="drop-zone">
+                        <input type="file" id="file-input" accept=".json,.srt" class="file-input-hidden">
+                        <div class="drop-zone-content">
+                            <div class="upload-icon">
+                                <i class="fa-solid fa-cloud-arrow-up"></i>
+                            </div>
+                            <h3>Kéo thả file <code>draft_content.json</code> hoặc file <code>.srt</code> vào đây</h3>
+                            <p>Hoặc nhấn để chọn file từ máy tính của bạn</p>
+                            <div class="selected-file-info hidden" id="file-info">
+                                <i class="fa-solid fa-file-code"></i>
+                                <span id="file-name">filename.json</span>
+                                <button type="button" class="btn-icon-small" id="remove-file-btn"><i class="fa-solid fa-xmark"></i></button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Input Method Tabs -->
+                    <div class="tab-selectors">
+                        <button type="button" class="tab-btn active" data-tab="tab-upload">
+                            <i class="fa-solid fa-upload"></i> Upload File
+                        </button>
+                        <button type="button" class="tab-btn" data-tab="tab-paste">
+                            <i class="fa-solid fa-code"></i> Dán Văn Bản
+                        </button>
+                    </div>
+
+                    <div class="tab-content active" id="tab-upload">
+                        <!-- Instructions -->
+                        <small class="help-text"><i class="fa-solid fa-circle-info"></i> Hỗ trợ file JSON CapCut / Jianying (draft_content.json) và file phụ đề (.srt)</small>
+                    </div>
+
+                    <div class="tab-content" id="tab-paste">
+                        <div class="form-group">
+                            <label for="json-text">Nội dung JSON hoặc SRT:</label>
+                            <textarea id="json-text" placeholder="Dán nội dung file draft_content.json hoặc file phụ đề .srt vào đây..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Configuration Inputs -->
+                    <div class="config-grid">
+                        <div class="form-group">
+                            <label for="target-lang"><i class="fa-solid fa-language"></i> Ngôn ngữ dịch sang</label>
+                            <select id="target-lang">
+                                <option value="Tiếng Việt" selected>Tiếng Việt</option>
+                                <option value="English">English</option>
+                                <option value="Tiếng Trung (Phồn thể)">Tiếng Trung (Phồn thể)</option>
+                                <option value="Tiếng Nhật">Tiếng Nhật</option>
+                                <option value="Tiếng Hàn">Tiếng Hàn</option>
+                                <option value="Tiếng Pháp">Tiếng Pháp</option>
+                                <option value="Tiếng Tây Ban Nha">Tiếng Tây Ban Nha</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="speed-factor"><i class="fa-solid fa-gauge-high"></i> Hệ số tốc độ (Speed factor)</label>
+                            <input type="number" id="speed-factor" step="0.1" value="1.0" min="0.1" max="10.0">
+                        </div>
+                    </div>
+
+                    <!-- Action Button -->
+                    <button type="submit" class="btn btn-primary btn-block" id="process-btn">
+                        <span><i class="fa-solid fa-bolt"></i> Bắt Đầu Phân Tích & Dịch Phụ Đề</span>
+                    </button>
+                </form>
+
+                <!-- Processing Overlay / Progress Status -->
+                <div class="progress-card hidden" id="progress-card">
+                    <div class="spinner-container">
+                        <div class="spinner"></div>
+                    </div>
+                    <div class="progress-info">
+                        <h4 id="progress-title">Đang khởi tạo Agent...</h4>
+                        <p id="progress-message">Vui lòng chờ trong giây lát</p>
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill" id="progress-bar"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Right Column: Context Analysis & Preview / Download -->
+            <section class="card glass-card output-section" id="output-section">
+                <!-- Welcome Placeholder -->
+                <div class="placeholder-state" id="placeholder-state">
+                    <div class="placeholder-icon">
+                        <i class="fa-solid fa-closed-captioning"></i>
+                    </div>
+                    <h3>Chưa có kết quả dịch</h3>
+                    <p>Tải lên file <code>draft_content.json</code> hoặc <code>.srt</code> và nhấn <strong>Bắt đầu</strong> để xem trực tiếp ngữ cảnh AI phân tích và bản dịch phụ đề SRT.</p>
+                </div>
+
+                <!-- Active Result Container -->
+                <div class="results-container hidden" id="results-container">
+                    <!-- Top Action Bar -->
+                    <div class="results-header">
+                        <div class="stats-pills">
+                            <span class="pill"><i class="fa-solid fa-list-check"></i> <strong id="stat-count">0</strong> Dòng phụ đề</span>
+                            <span class="pill"><i class="fa-solid fa-clock"></i> 30 FPS Snapped</span>
+                        </div>
+                        <div class="action-buttons">
+                            <button class="btn btn-secondary btn-sm" id="download-original-btn">
+                                <i class="fa-solid fa-file-arrow-down"></i> Tải SRT Gốc
+                            </button>
+                            <button class="btn btn-success btn-sm" id="download-translated-btn">
+                                <i class="fa-solid fa-download"></i> Tải SRT Đã Dịch
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- AI Context Card -->
+                    <div class="context-card">
+                        <div class="context-header">
+                            <i class="fa-solid fa-compass"></i>
+                            <span>Kết Quả AI Trinh Sát Ngữ Cảnh & Từ Vựng</span>
+                        </div>
+                        <div class="context-body" id="context-body">
+                            <!-- Context text rendered here -->
+                        </div>
+                    </div>
+
+                    <!-- Preview Mode Tabs -->
+                    <div class="preview-tabs">
+                        <div class="tab-selectors border-tabs">
+                            <button class="tab-btn active" data-preview-tab="tab-preview-table">
+                                <i class="fa-solid fa-table-columns"></i> Đối Chiếu Song Song
+                            </button>
+                            <button class="tab-btn" data-preview-tab="tab-preview-srt">
+                                <i class="fa-solid fa-file-lines"></i> Xem File SRT Thô
+                            </button>
+                        </div>
+                        <div class="copy-action">
+                            <button class="btn-text" id="copy-srt-btn"><i class="fa-solid fa-copy"></i> Sao chép SRT</button>
+                        </div>
+                    </div>
+
+                    <!-- Preview Table Content -->
+                    <div class="preview-content-box active" id="tab-preview-table">
+                        <div class="table-wrapper">
+                            <table class="subtitles-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 60px;">#</th>
+                                        <th style="width: 170px;">Thời Gian</th>
+                                        <th>Gốc (Original)</th>
+                                        <th>Bản Dịch AI (<span id="preview-lang">Tiếng Việt</span>)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="subtitles-tbody">
+                                    <!-- Dynamic rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Preview SRT Raw Content -->
+                    <div class="preview-content-box" id="tab-preview-srt">
+                        <pre class="srt-code-block" id="srt-code-block"></pre>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
