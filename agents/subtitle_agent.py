@@ -40,12 +40,15 @@ class SubtitleAgent:
 
     def parse_srt_content(self, srt_text):
         """
-        Parses raw SRT file content into subtitle tuples: (start_micro, end_micro, text_str)
+        Parses raw SRT file content into subtitle tuples: (start_micro, end_micro, text_str).
+        Handles both CRLF and LF line breaks cleanly.
         """
         if not srt_text:
             return []
 
-        blocks = re.split(r'\n\s*\n', srt_text.strip())
+        # Normalize line endings
+        normalized_text = srt_text.replace('\r\n', '\n').strip()
+        blocks = re.split(r'\n\s*\n', normalized_text)
         subs = []
         
         for block in blocks:
