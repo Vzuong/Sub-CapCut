@@ -23,19 +23,22 @@ def process_subtitles():
             fps=app.config['DEFAULT_FPS']
         )
 
+        base_name = "subtitles"
+
         # Option 1: File Upload (.json or .srt)
         if 'file' in request.files and request.files['file'].filename != '':
             uploaded_file = request.files['file']
-            filename = uploaded_file.filename.lower()
+            filename = uploaded_file.filename
+            base_name = os.path.splitext(filename)[0]
+            filename_lower = filename.lower()
             file_content = uploaded_file.read().decode('utf-8')
 
-            if filename.endswith('.srt'):
+            if filename_lower.endswith('.srt'):
                 result = orchestrator.process_srt_text(
                     srt_text=file_content,
                     target_language=target_language,
                     speed_multiplier=speed_factor
                 )
-                return jsonify(result)
             else:
                 try:
                     json_data = json.loads(file_content)
@@ -44,17 +47,15 @@ def process_subtitles():
                         target_language=target_language,
                         speed_multiplier=speed_factor
                     )
-                    return jsonify(result)
                 except json.JSONDecodeError:
-                    # Fallback check if it might be SRT text inside a non-standard named file
                     if '-->' in file_content:
                         result = orchestrator.process_srt_text(
                             srt_text=file_content,
                             target_language=target_language,
                             speed_multiplier=speed_factor
                         )
-                        return jsonify(result)
-                    raise
+                    else:
+                        raise
 
         # Option 2: Text Paste (JSON or SRT)
         elif request.form.get('json_text'):
@@ -65,7 +66,6 @@ def process_subtitles():
                     target_language=target_language,
                     speed_multiplier=speed_factor
                 )
-                return jsonify(result)
             else:
                 json_data = json.loads(pasted_text)
                 result = orchestrator.process_draft_json(
@@ -73,12 +73,14 @@ def process_subtitles():
                     target_language=target_language,
                     speed_multiplier=speed_factor
                 )
-                return jsonify(result)
         else:
             return jsonify({
                 "success": False,
                 "error": "Vui lòng tải lên file JSON / SRT hoặc dán nội dung văn bản."
             }), 400
+
+        result['filename_base'] = base_name
+        return jsonify(result)
 
     except json.JSONDecodeError:
         return jsonify({

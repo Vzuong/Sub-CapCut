@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const placeholderState = document.getElementById('placeholder-state');
     const resultsContainer = document.getElementById('results-container');
     const statCount = document.getElementById('stat-count');
+    const statTime = document.getElementById('stat-time');
     const contextBody = document.getElementById('context-body');
     const subtitlesTbody = document.getElementById('subtitles-tbody');
     const srtCodeBlock = document.getElementById('srt-code-block');
@@ -148,7 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(data.error || 'Có lỗi xảy ra trong quá trình xử lý');
             }
 
-            updateProgress('🎉 Hoàn thành!', 'Đã biên dịch xong toàn bộ phụ đề', 100);
+            updateProgress('🎉 Hoàn thành!', `Đã biên dịch xong toàn bộ phụ đề trong ${data.elapsed_total_sec || 0}s`, 100);
             processedResult = data;
 
             setTimeout(() => {
@@ -188,6 +189,10 @@ document.addEventListener('DOMContentLoaded', () => {
         resultsContainer.classList.remove('hidden');
 
         statCount.textContent = data.total_lines || 0;
+        if (statTime) {
+            statTime.textContent = `${data.elapsed_total_sec || 0}s`;
+        }
+
         previewLang.textContent = targetLang;
         contextBody.textContent = data.context_info || 'Không có ngữ cảnh chi tiết.';
 
@@ -210,16 +215,36 @@ document.addEventListener('DOMContentLoaded', () => {
         srtCodeBlock.textContent = data.translated_srt || '';
     }
 
+    // Helper to get sanitized language string for filename
+    function getLangSlug(lang) {
+        return lang.replace(/[\s()]+/g, '_').replace(/_+$/, '');
+    }
+
+    // Helper to get base filename
+    function getFileBaseName() {
+        if (processedResult && processedResult.filename_base && processedResult.filename_base !== 'subtitles') {
+            return processedResult.filename_base;
+        }
+        if (currentSelectedFile) {
+            const idx = currentSelectedFile.name.lastIndexOf('.');
+            return idx > 0 ? currentSelectedFile.name.substring(0, idx) : currentSelectedFile.name;
+        }
+        return 'subtitles';
+    }
+
     // --- Download Actions ---
     downloadOriginalBtn.addEventListener('click', () => {
         if (!processedResult || !processedResult.original_srt) return;
-        downloadFile('subtitles_original.srt', processedResult.original_srt);
+        const baseName = getFileBaseName();
+        downloadFile(`${baseName}_original.srt`, processedResult.original_srt);
     });
 
     downloadTranslatedBtn.addEventListener('click', () => {
         if (!processedResult || !processedResult.translated_srt) return;
-        const lang = document.getElementById('target-lang').value.replace(/\s+/g, '_');
-        downloadFile(`subtitles_${lang}.srt`, processedResult.translated_srt);
+        const baseName = getFileBaseName();
+        const rawLang = document.getElementById('target-lang').value;
+        const langSlug = getLangSlug(rawLang);
+        downloadFile(`${baseName}_${langSlug}.srt`, processedResult.translated_srt);
     });
 
     function downloadFile(filename, textContent) {
