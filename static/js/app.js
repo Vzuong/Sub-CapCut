@@ -279,4 +279,245 @@ document.addEventListener('DOMContentLoaded', () => {
             .replace(/"/g, "&quot;")
             .replace(/'/g, "&#039;");
     }
+
+    // ========================================================
+    // INTERACTIVE SPOTLIGHT CARD TRACKING
+    // Theo dõi tọa độ chuột để tạo quầng sáng quét mờ theo con trỏ
+    // ========================================================
+    const spotlightCards = document.querySelectorAll('.spotlight-card');
+    spotlightCards.forEach(card => {
+        card.addEventListener('mousemove', (e) => {
+            const rect = card.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            card.style.setProperty('--mouse-x', `${x}px`);
+            card.style.setProperty('--mouse-y', `${y}px`);
+        });
+    });
+
+    // ========================================================
+    // QUANTUM CYBER LASER GRID ENGINE (60 FPS - 3 COLORS ONLY)
+    // Hệ thống mạng lưới Laze Lượng Tử & Hạt Năng Lượng Đa Chiều
+    // Màu sắc: Void Black (nền) • Electric Cyan • Pure White
+    // ========================================================
+    const qCanvas = document.getElementById('quantumCanvas');
+    if (qCanvas) {
+        const ctx = qCanvas.getContext('2d');
+        let width = qCanvas.width = window.innerWidth;
+        let height = qCanvas.height = window.innerHeight;
+
+        let mouse = {
+            x: -1000,
+            y: -1000,
+            radius: 160,
+            active: false
+        };
+
+        window.addEventListener('resize', () => {
+            width = qCanvas.width = window.innerWidth;
+            height = qCanvas.height = window.innerHeight;
+            initParticles();
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+            mouse.active = true;
+        });
+
+        window.addEventListener('mouseleave', () => {
+            mouse.active = false;
+            mouse.x = -1000;
+            mouse.y = -1000;
+        });
+
+        window.addEventListener('touchmove', (e) => {
+            if (e.touches.length > 0) {
+                mouse.x = e.touches[0].clientX;
+                mouse.y = e.touches[0].clientY;
+                mouse.active = true;
+            }
+        }, { passive: true });
+
+        window.addEventListener('touchend', () => {
+            mouse.active = false;
+            mouse.x = -1000;
+            mouse.y = -1000;
+        });
+
+        // Particle Class
+        class QuantumNode {
+            constructor() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.baseX = this.x;
+                this.baseY = this.y;
+                this.vx = (Math.random() - 0.5) * 0.7;
+                this.vy = (Math.random() - 0.5) * 0.7;
+                this.radius = Math.random() * 1.8 + 1.2;
+                this.colorType = Math.random() > 0.25 ? 'cyan' : 'white';
+                this.pulsePhase = Math.random() * Math.PI * 2;
+                this.pulseSpeed = Math.random() * 0.03 + 0.015;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.pulsePhase += this.pulseSpeed;
+
+                // Bounce at edges
+                if (this.x < 0 || this.x > width) this.vx *= -1;
+                if (this.y < 0 || this.y > height) this.vy *= -1;
+
+                // Mouse interaction - gentle magnetic repulse/attract
+                if (mouse.active) {
+                    const dx = mouse.x - this.x;
+                    const dy = mouse.y - this.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < mouse.radius && dist > 0) {
+                        const force = (mouse.radius - dist) / mouse.radius;
+                        const angle = Math.atan2(dy, dx);
+                        // Repel slightly
+                        this.x -= Math.cos(angle) * force * 3.5;
+                        this.y -= Math.sin(angle) * force * 3.5;
+                    }
+                }
+            }
+
+            draw() {
+                const pulse = (Math.sin(this.pulsePhase) + 1) * 0.5; // 0 to 1
+                const currentRadius = this.radius * (0.85 + pulse * 0.35);
+
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, currentRadius, 0, Math.PI * 2);
+
+                if (this.colorType === 'cyan') {
+                    ctx.fillStyle = `rgba(0, 240, 255, ${0.45 + pulse * 0.45})`;
+                    ctx.shadowColor = 'rgba(0, 240, 255, 0.7)';
+                    ctx.shadowBlur = 8;
+                } else {
+                    ctx.fillStyle = `rgba(255, 255, 255, ${0.6 + pulse * 0.4})`;
+                    ctx.shadowColor = 'rgba(255, 255, 255, 0.8)';
+                    ctx.shadowBlur = 10;
+                }
+                ctx.fill();
+                ctx.shadowBlur = 0; // reset
+            }
+        }
+
+        let particles = [];
+        function initParticles() {
+            particles = [];
+            // Node density responsive
+            const count = Math.min(Math.floor((width * height) / 16000), 85);
+            for (let i = 0; i < count; i++) {
+                particles.push(new QuantumNode());
+            }
+        }
+        initParticles();
+
+        // Laser beam lines between close nodes
+        const maxDistance = 145;
+        const maxDistSq = maxDistance * maxDistance;
+
+        // Energy pulses running along laser lines
+        class EnergyPulse {
+            constructor(p1, p2) {
+                this.p1 = p1;
+                this.p2 = p2;
+                this.t = 0;
+                this.speed = Math.random() * 0.03 + 0.02;
+            }
+
+            update() {
+                this.t += this.speed;
+            }
+
+            draw() {
+                const px = this.p1.x + (this.p2.x - this.p1.x) * this.t;
+                const py = this.p1.y + (this.p2.y - this.p1.y) * this.t;
+                ctx.beginPath();
+                ctx.arc(px, py, 2.2, 0, Math.PI * 2);
+                ctx.fillStyle = '#ffffff';
+                ctx.shadowColor = '#00f0ff';
+                ctx.shadowBlur = 12;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        let energyPulses = [];
+
+        function renderQuantumGrid() {
+            ctx.clearRect(0, 0, width, height);
+
+            // 1. Draw Laser Connections
+            const len = particles.length;
+            for (let i = 0; i < len; i++) {
+                const pi = particles[i];
+                for (let j = i + 1; j < len; j++) {
+                    const pj = particles[j];
+                    const dx = pi.x - pj.x;
+                    const dy = pi.y - pj.y;
+                    const distSq = dx * dx + dy * dy;
+
+                    if (distSq < maxDistSq) {
+                        const dist = Math.sqrt(distSq);
+                        const alpha = (1 - dist / maxDistance) * 0.28;
+
+                        ctx.beginPath();
+                        ctx.moveTo(pi.x, pi.y);
+                        ctx.lineTo(pj.x, pj.y);
+                        ctx.strokeStyle = `rgba(0, 240, 255, ${alpha})`;
+                        ctx.lineWidth = 0.9;
+                        ctx.stroke();
+
+                        // Occasionally spawn laser spark pulse
+                        if (Math.random() < 0.0004 && energyPulses.length < 8) {
+                            energyPulses.push(new EnergyPulse(pi, pj));
+                        }
+                    }
+                }
+
+                // Laser connection to mouse cursor
+                if (mouse.active) {
+                    const mdx = pi.x - mouse.x;
+                    const mdy = pi.y - mouse.y;
+                    const mDistSq = mdx * mdx + mdy * mdy;
+                    if (mDistSq < mouse.radius * mouse.radius) {
+                        const mDist = Math.sqrt(mDistSq);
+                        const mAlpha = (1 - mDist / mouse.radius) * 0.45;
+
+                        ctx.beginPath();
+                        ctx.moveTo(pi.x, pi.y);
+                        ctx.lineTo(mouse.x, mouse.y);
+                        ctx.strokeStyle = `rgba(0, 240, 255, ${mAlpha})`;
+                        ctx.lineWidth = 1.2;
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            // 2. Draw Energy Pulses
+            for (let k = energyPulses.length - 1; k >= 0; k--) {
+                const ep = energyPulses[k];
+                ep.update();
+                if (ep.t >= 1) {
+                    energyPulses.splice(k, 1);
+                } else {
+                    ep.draw();
+                }
+            }
+
+            // 3. Update & Draw Particles
+            for (let i = 0; i < len; i++) {
+                particles[i].update();
+                particles[i].draw();
+            }
+
+            requestAnimationFrame(renderQuantumGrid);
+        }
+
+        renderQuantumGrid();
+    }
 });
