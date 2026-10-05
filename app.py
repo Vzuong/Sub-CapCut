@@ -23,79 +23,51 @@ def process_subtitles():
             fps=app.config['DEFAULT_FPS']
         )
 
-        base_name = "subtitles"
+        base_name = "translated_content"
+        content = None
 
-        # Option 1: File Upload (.json or .srt)
+        # Option 1: File Upload (.json, .srt, .txt, etc.)
         if 'file' in request.files and request.files['file'].filename != '':
             uploaded_file = request.files['file']
             filename = uploaded_file.filename
             base_name = os.path.splitext(filename)[0]
-            filename_lower = filename.lower()
-            file_content = uploaded_file.read().decode('utf-8')
+            raw_bytes = uploaded_file.read()
+            try:
+                content = raw_bytes.decode('utf-8')
+            except UnicodeDecodeError:
+                content = raw_bytes.decode('utf-8-sig', errors='replace')
 
-            if filename_lower.endswith('.srt'):
-                result = orchestrator.process_srt_text(
-                    srt_text=file_content,
-                    target_language=target_language,
-                    speed_multiplier=speed_factor
-                )
-            else:
-                try:
-                    json_data = json.loads(file_content)
-                    result = orchestrator.process_draft_json(
-                        json_data=json_data,
-                        target_language=target_language,
-                        speed_multiplier=speed_factor
-                    )
-                except json.JSONDecodeError:
-                    if '-->' in file_content:
-                        result = orchestrator.process_srt_text(
-                            srt_text=file_content,
-                            target_language=target_language,
-                            speed_multiplier=speed_factor
-                        )
-                    else:
-                        raise
-
-        # Option 2: Text Paste (JSON or SRT)
+        # Option 2: Text Paste (any text: plain text, SRT, CapCut JSON, generic JSON)
         elif request.form.get('json_text'):
-            pasted_text = request.form.get('json_text').strip()
-            if '-->' in pasted_text and not pasted_text.startswith('{'):
-                result = orchestrator.process_srt_text(
-                    srt_text=pasted_text,
-                    target_language=target_language,
-                    speed_multiplier=speed_factor
-                )
-            else:
-                json_data = json.loads(pasted_text)
-                result = orchestrator.process_draft_json(
-                    json_data=json_data,
-                    target_language=target_language,
-                    speed_multiplier=speed_factor
-                )
+            content = request.form.get('json_text').strip()
+            base_name = "pasted_translated"
         else:
             return jsonify({
                 "success": False,
-                "error": "Vui lòng tải lên file JSON / SRT hoặc dán nội dung văn bản."
+                "error": "Vui lòng tải lên file (.json, .srt, .txt) hoặc dán nội dung văn bản cần dịch."
             }), 400
+
+        result = orchestrator.process_any_input(
+            content=content,
+            target_language=target_language,
+            speed_multiplier=speed_factor
+        )
+
+        if not result.get("success"):
+            return jsonify(result), 400
 
         result['filename_base'] = base_name
         return jsonify(result)
 
-    except json.JSONDecodeError:
-        return jsonify({
-            "success": False,
-            "error": "File hoặc cú pháp không hợp lệ. Vui lòng kiểm tra lại cấu trúc file draft_content.json hoặc file .srt!"
-        }), 400
     except Exception as e:
         return jsonify({
             "success": False,
-            "error": f"Lỗi hệ thống: {str(e)}"
+            "error": f"Lỗi xử lý hệ thống: {str(e)}"
         }), 500
 
 if __name__ == '__main__':
     print("=" * 60)
-    print("CAPCUT SRT AGENT FLASK WEB APPLICATION STARTING...")
+    print("CAPCUT SRT & TEXT TRANSLATOR WEB APPLICATION STARTING...")
     print("Truy cap ung dung tai: http://127.0.0.1:5000")
     print("=" * 60)
     app.run(host='0.0.0.0', port=5000, debug=True)

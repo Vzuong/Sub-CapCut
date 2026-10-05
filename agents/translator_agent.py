@@ -130,3 +130,119 @@ Văn bản cần dịch sang {target_lang}:
             all_blocks.extend(results.get(chunk_idx, []))
 
         return all_blocks
+
+    def _strip_markdown_code_fences(self, text, original_input):
+        cleaned = text.strip()
+        if cleaned.startswith("```") and not original_input.strip().startswith("```"):
+            lines = cleaned.splitlines()
+            if len(lines) > 1:
+                cleaned = "\n".join(lines[1:])
+            if cleaned.endswith("```"):
+                cleaned = "\n".join(cleaned.splitlines()[:-1])
+        return cleaned.strip()
+
+    def translate_text(self, text, target_lang=Config.DEFAULT_TARGET_LANGUAGE, auto_context="", progress_callback=None):
+        """
+        Translates plain text, articles, paragraphs, dialogues, or lyrics while strictly preserving
+        original layout, line breaks, indentation, and list markers.
+        """
+        if not text or not text.strip():
+            return ""
+
+        input_text = text.strip()
+
+        # If short or medium text, process in 1 prompt for best semantic coherence
+        if len(input_text) <= 3500:
+            if progress_callback:
+                progress_callback(50, 100, f"🚀 Đang dịch văn bản sang {target_lang}...")
+            return self._translate_text_single(input_text, target_lang, auto_context)
+
+        # For long text, chunk by paragraphs (double newlines)
+        if progress_callback:
+            progress_callback(30, 100, f"🚀 Đang phân đoạn và dịch văn bản dài sang {target_lang}...")
+
+        paragraphs = re.split(r'(\n\s*\n)', input_text)
+        chunks = []
+        current_chunk = []
+        current_len = 0
+
+        for part in paragraphs:
+            if current_len + len(part) > 2800 and current_chunk:
+                chunks.append("".join(current_chunk))
+                current_chunk = [part]
+                current_len = len(part)
+            else:
+                current_chunk.append(part)
+                current_len += len(part)
+
+        if current_chunk:
+            chunks.append("".join(current_chunk))
+
+        translated_chunks = []
+        for idx, chunk in enumerate(chunks):
+            if progress_callback:
+                pct = 30 + int((idx / len(chunks)) * 60)
+                progress_callback(pct, 100, f"🚀 Đang dịch đoạn {idx + 1}/{len(chunks)} sang {target_lang}...")
+            trans_chunk = self._translate_text_single(chunk, target_lang, auto_context)
+            translated_chunks.append(trans_chunk)
+
+        return "".join(translated_chunks).strip()
+
+    def _translate_text_single(self, chunk_text, target_lang, auto_context):
+        prompt = f"""Bạn là một chuyên gia biên dịch ngôn ngữ cao cấp.
+Nhiệm vụ: Dịch toàn bộ văn bản dưới đây sang: {target_lang}.
+
+{f'Ngữ cảnh & Thuật ngữ tham khảo (hãy bám sát để dùng từ chuẩn nhất):\n{auto_context}\n' if auto_context else ''}
+⚠️ CÁC NGUYÊN TẮC BẮT BUỘC VỀ ĐỊNH DẠNG (BẢO LƯU 100% CẤU TRÚC GỐC):
+1. GIỮ NGUYÊN HOÀN TOÀN CẤU TRÚC GỐC:
+   - Giữ nguyên tất cả các dấu xuống dòng (\\n), dòng trắng ngăn cách các đoạn, khoảng trống và thụt đầu dòng.
+   - Giữ nguyên các ký hiệu đầu dòng (-, *, •, 1., a., v.v.), tên người nói trong hội thoại (như "Alice:", "Người dẫn chuyện:").
+   - Giữ nguyên các thẻ HTML, emoji, ký hiệu đặc biệt, URL nếu có.
+2. TUYỆT ĐỐI KHÔNG thêm bất kỳ câu mở đầu, giải thích hay kết luận nào (KHÔNG viết "Dưới đây là...", "Bản dịch:", hay lời chào).
+3. TUYỆT ĐỐI KHÔNG bọc toàn bộ nội dung trong khối mã markdown (```).
+4. Dịch tự nhiên, chính xác, trau chuốt theo đúng ngữ cảnh văn phong của {target_lang}.
+
+VĂN BẢN CẦN DỊCH:
+{chunk_text}"""
+        try:
+            response = self.model.generate_content(
+                prompt,
+                generation_config=genai.types.GenerationConfig(temperature=0.15)
+            )
+            raw_text = response.text
+            return self._strip_markdown_code_fences(raw_text, chunk_text)
+        except Exception as e:
+            print(f"❌ Lỗi TranslatorAgent khi dịch văn bản: {e}")
+            return chunk_text
+
+    def translate_json_data(self, json_data, target_lang=Config.DEFAULT_TARGET_LANGUAGE, auto_context="", progress_callback=None):
+        """
+        Translates string values in generic JSON data while preserving JSON keys and syntax structure.
+        """
+        import json as pyjson
+        json_str = pyjson.dumps(json_data, ensure_ascii=False, indent=2)
+        prompt = f"""Bạn là chuyên gia dịch thuật JSON.
+Nhiệm vụ: Dịch tất cả các chuỗi giá trị văn bản người dùng trong cấu trúc JSON sau sang: {target_lang}.
+
+{f'Ngữ cảnh tham khảo:\n{auto_context}\n' if auto_context else ''}
+⚠️ QUY TẮC BẮT BUỘC:
+1. GIỮ NGUYÊN cấu trúc cú pháp JSON (tên keys, kiểu dữ liệu số/boolean, dấu ngoặc, dấu phẩy, thụt dòng).
+2. Chỉ dịch giá trị chuỗi (string values), KHÔNG dịch tên keys.
+3. Đầu ra phải là chuỗi JSON hợp lệ 100%. Không thêm lời dẫn hay giải thích.
+4. Không bọc trong ```json hay ```.
+
+JSON GỐC:
+{json_str}"""
+        try:
+            response = self.model.generate_content(
+                prompt,
+                generation_config=genai.types.GenerationConfig(temperature=0.1)
+            )
+            raw_json = self._strip_markdown_code_fences(response.text, json_str)
+            # Verify valid JSON
+            pyjson.loads(raw_json)
+            return raw_json
+        except Exception as e:
+            print(f"❌ Lỗi TranslatorAgent khi dịch JSON: {e}")
+            return json_str
+

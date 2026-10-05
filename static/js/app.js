@@ -17,15 +17,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const placeholderState = document.getElementById('placeholder-state');
     const resultsContainer = document.getElementById('results-container');
     const statCount = document.getElementById('stat-count');
-    const statTime = document.getElementById('stat-time');
+    const statUnit = document.getElementById('stat-unit');
+    const statFormat = document.getElementById('stat-format');
     const contextBody = document.getElementById('context-body');
     const subtitlesTbody = document.getElementById('subtitles-tbody');
-    const srtCodeBlock = document.getElementById('srt-code-block');
+    const rawCodeBlock = document.getElementById('raw-code-block');
     const previewLang = document.getElementById('preview-lang');
+    const thPositionLabel = document.getElementById('th-position-label');
+    const rawTabLabel = document.getElementById('raw-tab-label');
+    const rawBadge = document.getElementById('raw-badge');
 
     const downloadOriginalBtn = document.getElementById('download-original-btn');
+    const downloadOriginalText = document.getElementById('download-original-text');
     const downloadTranslatedBtn = document.getElementById('download-translated-btn');
-    const copySrtBtn = document.getElementById('copy-srt-btn');
+    const downloadTranslatedText = document.getElementById('download-translated-text');
+    const headerCopyBtn = document.getElementById('header-copy-btn');
+    const headerCopyText = document.getElementById('header-copy-text');
+    const copyPreviewBtn = document.getElementById('copy-preview-btn');
+    const copyPreviewText = document.getElementById('copy-preview-text');
+    const copyRawBtn = document.getElementById('copy-raw-btn');
 
     let currentSelectedFile = null;
     let processedResult = null;
@@ -62,8 +72,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function handleFileSelected(file) {
         const ext = file.name.toLowerCase();
-        if (!ext.endsWith('.json') && !ext.endsWith('.srt')) {
-            alert('Vui lòng chọn file định dạng .json hoặc .srt!');
+        if (!ext.endsWith('.json') && !ext.endsWith('.srt') && !ext.endsWith('.txt')) {
+            alert('Vui lòng chọn file định dạng .json, .srt hoặc .txt!');
             return;
         }
         currentSelectedFile = file;
@@ -91,7 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // --- Preview Mode Tabs (Table vs SRT) ---
+    // --- Preview Mode Tabs (Table vs Raw) ---
     const previewTabBtns = document.querySelectorAll('.border-tabs .tab-btn');
     previewTabBtns.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -118,25 +128,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (activeInputTab === 'tab-upload') {
             if (!currentSelectedFile) {
-                alert('Vui lòng chọn hoặc kéo thả file JSON / SRT trước khi bấm Bắt đầu!');
+                alert('Vui lòng chọn hoặc kéo thả file (.json, .srt, .txt) trước khi bấm Bắt đầu!');
                 return;
             }
             formData.append('file', currentSelectedFile);
         } else {
-            const jsonText = document.getElementById('json-text').value.trim();
-            if (!jsonText) {
-                alert('Vui lòng dán nội dung JSON hoặc SRT vào ô văn bản!');
+            const pastedText = document.getElementById('json-text').value.trim();
+            if (!pastedText) {
+                alert('Vui lòng dán nội dung văn bản, SRT hoặc JSON vào ô văn bản!');
                 return;
             }
-            formData.append('json_text', jsonText);
+            formData.append('json_text', pastedText);
         }
 
         // Show loading progress
-        showProgress('🚀 Khởi động Agent...', 'Đang đọc và phân tích cấu trúc phụ đề...', 15);
+        showProgress('🚀 Khởi động AI Engine...', 'Đang nạp dữ liệu và phân tích mạch ngữ cảnh...', 20);
         processBtn.disabled = true;
 
         try {
-            updateProgress('🤖 AI Agent đang trinh sát ngữ cảnh & dịch...', 'Đang xử lý toàn bộ phụ đề trong 1 quy trình liên tục...', 50);
+            updateProgress('🤖 AI Agent đang dịch thuật & giữ nguyên định dạng...', 'Đang xử lý nội dung bằng mô hình Gemini AI...', 55);
 
             const response = await fetch('/api/process', {
                 method: 'POST',
@@ -149,14 +159,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(data.error || 'Có lỗi xảy ra trong quá trình xử lý');
             }
 
-            updateProgress('🎉 Hoàn thành!', `Đã biên dịch xong toàn bộ phụ đề trong ${data.elapsed_total_sec || 0}s`, 100);
+            updateProgress('🎉 Hoàn thành!', 'Đã biên dịch thành công và bảo toàn 100% định dạng.', 100);
             processedResult = data;
 
             setTimeout(() => {
                 hideProgress();
                 renderResults(data, targetLang);
                 processBtn.disabled = false;
-            }, 600);
+            }, 500);
 
         } catch (err) {
             alert(`Lỗi: ${err.message}`);
@@ -188,31 +198,78 @@ document.addEventListener('DOMContentLoaded', () => {
         placeholderState.classList.add('hidden');
         resultsContainer.classList.remove('hidden');
 
-        statCount.textContent = data.total_lines || 0;
-        if (statTime) {
-            statTime.textContent = `${data.elapsed_total_sec || 0}s`;
-        }
-
+        statCount.textContent = data.total_lines || (data.blocks ? data.blocks.length : 1);
         previewLang.textContent = targetLang;
         contextBody.textContent = data.context_info || 'Không có ngữ cảnh chi tiết.';
 
-        // Render Table Rows
+        const fmt = data.format_type || 'text';
+
+        // Adaptive Labels based on format
+        if (fmt === 'text') {
+            statUnit.textContent = 'Đoạn / Câu';
+            statFormat.textContent = 'Văn bản thuần';
+            if (thPositionLabel) thPositionLabel.textContent = 'Vị Trí / Đoạn';
+            if (rawTabLabel) rawTabLabel.textContent = 'Văn Bản Hoàn Chỉnh';
+            if (rawBadge) rawBadge.textContent = 'Văn Bản Định Dạng Gốc';
+            if (downloadOriginalText) downloadOriginalText.textContent = 'Tải Bản Gốc (.txt)';
+            if (downloadTranslatedText) downloadTranslatedText.textContent = 'Tải Bản Dịch (.txt)';
+            if (headerCopyText) headerCopyText.textContent = 'Sao Chép Văn Bản';
+        } else if (fmt === 'srt') {
+            statUnit.textContent = 'Dòng phụ đề';
+            statFormat.textContent = 'Phụ đề SRT';
+            if (thPositionLabel) thPositionLabel.textContent = 'Thời Gian';
+            if (rawTabLabel) rawTabLabel.textContent = 'Xem File SRT Thô';
+            if (rawBadge) rawBadge.textContent = 'File Phụ Đề SRT';
+            if (downloadOriginalText) downloadOriginalText.textContent = 'Tải SRT Gốc (.srt)';
+            if (downloadTranslatedText) downloadTranslatedText.textContent = 'Tải SRT Đã Dịch (.srt)';
+            if (headerCopyText) headerCopyText.textContent = 'Sao Chép SRT';
+        } else if (fmt === 'capcut_json') {
+            statUnit.textContent = 'Phụ đề CapCut';
+            statFormat.textContent = 'CapCut JSON';
+            if (thPositionLabel) thPositionLabel.textContent = 'Thời Gian';
+            if (rawTabLabel) rawTabLabel.textContent = 'Xem JSON / SRT';
+            if (rawBadge) rawBadge.textContent = 'CapCut Draft JSON';
+            if (downloadOriginalText) downloadOriginalText.textContent = 'Tải JSON Gốc';
+            if (downloadTranslatedText) downloadTranslatedText.textContent = 'Tải SRT Đã Dịch';
+            if (headerCopyText) headerCopyText.textContent = 'Sao Chép Kết Quả';
+        } else {
+            statUnit.textContent = 'Mục dữ liệu';
+            statFormat.textContent = 'Dữ liệu JSON';
+            if (thPositionLabel) thPositionLabel.textContent = 'Vị Trí / Key';
+            if (rawTabLabel) rawTabLabel.textContent = 'Xem JSON Đã Dịch';
+            if (rawBadge) rawBadge.textContent = 'JSON Chuẩn Hóa';
+            if (downloadOriginalText) downloadOriginalText.textContent = 'Tải JSON Gốc';
+            if (downloadTranslatedText) downloadTranslatedText.textContent = 'Tải JSON Dịch';
+            if (headerCopyText) headerCopyText.textContent = 'Sao Chép JSON';
+        }
+
+        // Render Table Rows with Row Copy Button
         subtitlesTbody.innerHTML = '';
         if (data.blocks && data.blocks.length > 0) {
             data.blocks.forEach(block => {
                 const tr = document.createElement('tr');
+                const timeOrPos = block.end 
+                    ? `${escapeHtml(block.start)} &rarr;<br>${escapeHtml(block.end)}` 
+                    : escapeHtml(block.start);
+                
                 tr.innerHTML = `
                     <td>${block.id}</td>
-                    <td class="srt-time">${block.start} &rarr;<br>${block.end}</td>
+                    <td class="srt-time">${timeOrPos}</td>
                     <td class="sub-orig">${escapeHtml(block.original)}</td>
                     <td class="sub-trans">${escapeHtml(block.translated)}</td>
+                    <td style="text-align: center;">
+                        <button type="button" class="btn-copy-row" title="Sao chép nội dung dịch này" data-text="${escapeHtml(block.translated)}">
+                            <i class="fa-solid fa-copy"></i>
+                        </button>
+                    </td>
                 `;
                 subtitlesTbody.appendChild(tr);
             });
         }
 
-        // Render Raw SRT Text
-        srtCodeBlock.textContent = data.translated_srt || '';
+        // Render Raw/Full Translated Text
+        const fullTranslated = data.translated_content || data.translated_srt || data.translated_json || '';
+        rawCodeBlock.textContent = fullTranslated;
     }
 
     // Helper to get sanitized language string for filename
@@ -229,22 +286,45 @@ document.addEventListener('DOMContentLoaded', () => {
             const idx = currentSelectedFile.name.lastIndexOf('.');
             return idx > 0 ? currentSelectedFile.name.substring(0, idx) : currentSelectedFile.name;
         }
-        return 'subtitles';
+        return 'translated_content';
     }
 
     // --- Download Actions ---
     downloadOriginalBtn.addEventListener('click', () => {
-        if (!processedResult || !processedResult.original_srt) return;
+        if (!processedResult) return;
+        const fmt = processedResult.format_type || 'text';
         const baseName = getFileBaseName();
-        downloadFile(`${baseName}_original.srt`, processedResult.original_srt);
+        const content = processedResult.original_content || processedResult.original_srt || '';
+
+        if (fmt === 'text') {
+            downloadFile(`${baseName}_original.txt`, content);
+        } else if (fmt === 'srt') {
+            downloadFile(`${baseName}_original.srt`, content);
+        } else {
+            downloadFile(`${baseName}_original.json`, content);
+        }
     });
 
     downloadTranslatedBtn.addEventListener('click', () => {
-        if (!processedResult || !processedResult.translated_srt) return;
+        if (!processedResult) return;
+        const fmt = processedResult.format_type || 'text';
         const baseName = getFileBaseName();
         const rawLang = document.getElementById('target-lang').value;
         const langSlug = getLangSlug(rawLang);
-        downloadFile(`${baseName}_${langSlug}.srt`, processedResult.translated_srt);
+        const content = processedResult.translated_content || processedResult.translated_srt || '';
+
+        if (fmt === 'text') {
+            downloadFile(`${baseName}_${langSlug}.txt`, content);
+        } else if (fmt === 'srt') {
+            downloadFile(`${baseName}_${langSlug}.srt`, content);
+        } else {
+            // For CapCut, if translated_srt is available, provide SRT, else JSON
+            if (processedResult.translated_srt) {
+                downloadFile(`${baseName}_${langSlug}.srt`, processedResult.translated_srt);
+            } else {
+                downloadFile(`${baseName}_${langSlug}.json`, content);
+            }
+        }
     });
 
     function downloadFile(filename, textContent) {
@@ -259,26 +339,108 @@ document.addEventListener('DOMContentLoaded', () => {
         URL.revokeObjectURL(url);
     }
 
-    // --- Copy SRT Clipboard ---
-    copySrtBtn.addEventListener('click', () => {
-        if (!processedResult || !processedResult.translated_srt) return;
-        navigator.clipboard.writeText(processedResult.translated_srt).then(() => {
-            const origText = copySrtBtn.innerHTML;
-            copySrtBtn.innerHTML = '<i class="fa-solid fa-check"></i> Đã sao chép!';
+    // --- Universal Clipboard Copy Helper with Feedback ---
+    function copyTextToClipboard(text, buttonElement) {
+        if (!text) return;
+        const originalHtml = buttonElement.innerHTML;
+
+        const setSuccess = () => {
+            buttonElement.classList.add('copied');
+            buttonElement.innerHTML = '<i class="fa-solid fa-check"></i> Đã sao chép!';
             setTimeout(() => {
-                copySrtBtn.innerHTML = origText;
-            }, 2000);
+                buttonElement.classList.remove('copied');
+                buttonElement.innerHTML = originalHtml;
+            }, 2500);
+        };
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(setSuccess).catch(() => {
+                fallbackCopyText(text);
+                setSuccess();
+            });
+        } else {
+            fallbackCopyText(text);
+            setSuccess();
+        }
+    }
+
+    function fallbackCopyText(text) {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'fixed';
+        textarea.style.top = '-9999px';
+        textarea.style.left = '-9999px';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        try {
+            document.execCommand('copy');
+        } catch (err) {
+            console.error('Fallback copy error:', err);
+        }
+        document.body.removeChild(textarea);
+    }
+
+    // Header Main Copy Button
+    if (headerCopyBtn) {
+        headerCopyBtn.addEventListener('click', () => {
+            if (!processedResult) return;
+            const textToCopy = processedResult.translated_content || processedResult.translated_srt || '';
+            copyTextToClipboard(textToCopy, headerCopyBtn);
         });
+    }
+
+    // Preview Toolbar Copy Button
+    if (copyPreviewBtn) {
+        copyPreviewBtn.addEventListener('click', () => {
+            if (!processedResult) return;
+            const textToCopy = processedResult.translated_content || processedResult.translated_srt || '';
+            copyTextToClipboard(textToCopy, copyPreviewBtn);
+        });
+    }
+
+    // Raw Tab Top-Right Copy Button
+    if (copyRawBtn) {
+        copyRawBtn.addEventListener('click', () => {
+            if (!processedResult) return;
+            const textToCopy = processedResult.translated_content || processedResult.translated_srt || '';
+            copyTextToClipboard(textToCopy, copyRawBtn);
+        });
+    }
+
+    // Row-level Copy Buttons (Event Delegation)
+    subtitlesTbody.addEventListener('click', (e) => {
+        const btn = e.target.closest('.btn-copy-row');
+        if (btn) {
+            const textToCopy = btn.getAttribute('data-text');
+            if (textToCopy) {
+                const origHtml = btn.innerHTML;
+                btn.innerHTML = '<i class="fa-solid fa-check" style="color:#00f0ff;"></i>';
+                btn.style.borderColor = '#00f0ff';
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(textToCopy);
+                } else {
+                    fallbackCopyText(textToCopy);
+                }
+                setTimeout(() => {
+                    btn.innerHTML = origHtml;
+                    btn.style.borderColor = '';
+                }, 1800);
+            }
+        }
     });
 
     function escapeHtml(text) {
-        return text
+        if (!text) return '';
+        return String(text)
             .replace(/&/g, "&amp;")
             .replace(/</g, "&lt;")
             .replace(/>/g, "&gt;")
             .replace(/"/g, "&quot;")
             .replace(/'/g, "&#039;");
     }
+
 
     // ========================================================
     // INTERACTIVE SPOTLIGHT CARD TRACKING

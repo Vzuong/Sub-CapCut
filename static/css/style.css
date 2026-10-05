@@ -1052,21 +1052,121 @@ select:focus, input[type="number"]:focus {
     font-weight: 500;
 }
 
-/* Raw SRT */
-.srt-code-block {
+/* Raw Display & Formatting */
+.raw-display-wrapper {
     background: #06080d;
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
-    padding: 16px;
-    font-family: var(--font-code);
-    font-size: 12.5px;
-    line-height: 1.6;
+    overflow: hidden;
+    position: relative;
+    z-index: 1;
+}
+
+.raw-display-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    background: rgba(0, 240, 255, 0.04);
+    border-bottom: 1px solid rgba(0, 240, 255, 0.12);
+}
+
+.raw-format-badge {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
     color: var(--color-cyan);
+    background: rgba(0, 240, 255, 0.1);
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid rgba(0, 240, 255, 0.25);
+}
+
+.btn-text-small {
+    background: transparent;
+    border: 1px solid rgba(0, 240, 255, 0.25);
+    border-radius: var(--radius-sm);
+    color: var(--color-silver);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 12px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: var(--transition);
+}
+
+.btn-text-small:hover {
+    color: #ffffff;
+    background: rgba(0, 240, 255, 0.15);
+    border-color: var(--color-cyan);
+    box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+}
+
+.srt-code-block {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 18px;
+    font-family: var(--font-code);
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--color-silver);
     max-height: 520px;
     overflow-y: auto;
     white-space: pre-wrap;
+    word-break: break-word;
     position: relative;
     z-index: 1;
+}
+
+/* Copy Button Styling & Feedback */
+.btn-copy-highlight {
+    background: linear-gradient(135deg, #00f0ff 0%, #00b4d8 100%);
+    color: #03060a !important;
+    font-weight: 700;
+    box-shadow: 0 0 20px rgba(0, 240, 255, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    transition: var(--transition);
+}
+
+.btn-copy-highlight:hover {
+    background: #ffffff !important;
+    color: #000000 !important;
+    box-shadow: 0 0 30px rgba(0, 240, 255, 0.8);
+    transform: translateY(-1px);
+}
+
+.btn.copied, .btn-text-small.copied {
+    background: #10b981 !important;
+    color: #ffffff !important;
+    border-color: #10b981 !important;
+    box-shadow: 0 0 25px rgba(16, 185, 129, 0.7) !important;
+}
+
+/* Row-level Copy Button */
+.btn-copy-row {
+    background: rgba(0, 240, 255, 0.06);
+    border: 1px solid rgba(0, 240, 255, 0.2);
+    border-radius: 6px;
+    color: var(--color-muted);
+    font-size: 12px;
+    padding: 6px 10px;
+    cursor: pointer;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-copy-row:hover {
+    background: rgba(0, 240, 255, 0.18);
+    border-color: var(--color-cyan);
+    color: var(--color-cyan);
+    box-shadow: 0 0 12px rgba(0, 240, 255, 0.35);
+    transform: scale(1.05);
 }
 
 /* Scrollbars */
