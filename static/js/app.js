@@ -270,6 +270,21 @@ document.addEventListener('DOMContentLoaded', () => {
         // Render Raw/Full Translated Text
         const fullTranslated = data.translated_content || data.translated_srt || data.translated_json || '';
         rawCodeBlock.textContent = fullTranslated;
+
+        if (fmt === 'text') {
+            rawCodeBlock.classList.remove('monospace-mode');
+        } else {
+            rawCodeBlock.classList.add('monospace-mode');
+        }
+
+        const rawTextStats = document.getElementById('raw-text-stats');
+        if (rawTextStats && fullTranslated) {
+            const wordCount = fullTranslated.trim().split(/\s+/).filter(Boolean).length;
+            const charCount = fullTranslated.length;
+            rawTextStats.textContent = `• ${wordCount} từ (${charCount} ký tự)`;
+        } else if (rawTextStats) {
+            rawTextStats.textContent = '';
+        }
     }
 
     // Helper to get sanitized language string for filename

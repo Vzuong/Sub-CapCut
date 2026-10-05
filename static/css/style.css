@@ -982,6 +982,18 @@ select:focus, input[type="number"]:focus {
     filter: drop-shadow(0 0 6px var(--color-cyan));
 }
 
+/* Preview Content Tab Panels (Switching between Table and Full Document) */
+.preview-content-box {
+    display: none !important;
+    position: relative;
+    z-index: 1;
+}
+
+.preview-content-box.active {
+    display: block !important;
+    animation: fadeIn 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 /* Subtitles Table */
 .table-wrapper {
     max-height: 520px;
@@ -1105,21 +1117,41 @@ select:focus, input[type="number"]:focus {
     box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
 }
 
-.srt-code-block {
+.raw-toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.raw-text-stats {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-muted);
+}
+
+.srt-code-block, .document-content-area {
     background: transparent;
     border: none;
     border-radius: 0;
-    padding: 18px;
-    font-family: var(--font-code);
-    font-size: 13px;
-    line-height: 1.7;
-    color: var(--color-silver);
+    padding: 24px 26px;
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.85;
+    color: #f1f5f9;
     max-height: 520px;
     overflow-y: auto;
     white-space: pre-wrap;
     word-break: break-word;
     position: relative;
     z-index: 1;
+    user-select: text;
+}
+
+.srt-code-block.monospace-mode, .document-content-area.monospace-mode {
+    font-family: var(--font-code);
+    font-size: 13px;
+    line-height: 1.65;
+    color: var(--color-cyan);
 }
 
 /* Copy Button Styling & Feedback */
