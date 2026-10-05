@@ -31,6 +31,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const downloadOriginalText = document.getElementById('download-original-text');
     const downloadTranslatedBtn = document.getElementById('download-translated-btn');
     const downloadTranslatedText = document.getElementById('download-translated-text');
+    const downloadDraftBtn = document.getElementById('download-draft-btn');
+    const saveStatus = document.getElementById('save-status');
     const headerCopyBtn = document.getElementById('header-copy-btn');
     const headerCopyText = document.getElementById('header-copy-text');
     const copyPreviewBtn = document.getElementById('copy-preview-btn');
@@ -243,10 +245,19 @@ document.addEventListener('DOMContentLoaded', () => {
             if (headerCopyText) headerCopyText.textContent = 'Sao Chép JSON';
         }
 
-        // Render Table Rows with Row Copy Button
+        // Toggle Subtle CapCut Draft Download Button
+        if (downloadDraftBtn) {
+            if (fmt === 'capcut_json') {
+                downloadDraftBtn.classList.remove('hidden');
+            } else {
+                downloadDraftBtn.classList.add('hidden');
+            }
+        }
+
+        // Render Table Rows with Editable Cell and Row Copy Button
         subtitlesTbody.innerHTML = '';
         if (data.blocks && data.blocks.length > 0) {
-            data.blocks.forEach(block => {
+            data.blocks.forEach((block, index) => {
                 const tr = document.createElement('tr');
                 const timeOrPos = block.end 
                     ? `${escapeHtml(block.start)} &rarr;<br>${escapeHtml(block.end)}` 
@@ -256,7 +267,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${block.id}</td>
                     <td class="srt-time">${timeOrPos}</td>
                     <td class="sub-orig">${escapeHtml(block.original)}</td>
-                    <td class="sub-trans">${escapeHtml(block.translated)}</td>
+                    <td class="sub-trans" contenteditable="true" spellcheck="false" data-index="${index}" title="Bấm vào để chỉnh sửa trực tiếp">${escapeHtml(block.translated)}</td>
                     <td style="text-align: center;">
                         <button type="button" class="btn-copy-row" title="Sao chép nội dung dịch này" data-text="${escapeHtml(block.translated)}">
                             <i class="fa-solid fa-copy"></i>
@@ -454,6 +465,112 @@ document.addEventListener('DOMContentLoaded', () => {
             .replace(/>/g, "&gt;")
             .replace(/"/g, "&quot;")
             .replace(/'/g, "&#039;");
+    }
+
+    // --- Inline Table Editing Handler & Auto-Sync ---
+    let editSyncTimer = null;
+    let saveStatusTimer = null;
+
+    function showSaveStatus() {
+        if (!saveStatus) return;
+        saveStatus.classList.remove('hidden');
+        clearTimeout(saveStatusTimer);
+        saveStatusTimer = setTimeout(() => {
+            saveStatus.classList.add('hidden');
+        }, 1800);
+    }
+
+    function syncAllOutputsFromBlocks() {
+        if (!processedResult || !processedResult.blocks) return;
+        const fmt = processedResult.format_type || 'text';
+
+        // 1. Rebuild translated SRT
+        if (fmt === 'srt' || fmt === 'capcut_json') {
+            processedResult.translated_srt = processedResult.blocks.map(b => 
+                `${b.id}\n${b.start} --> ${b.end}\n${b.translated}\n`
+            ).join('\n').trim();
+        }
+
+        // 2. Rebuild CapCut JSON if available
+        if (fmt === 'capcut_json' && processedResult.draft_json_data) {
+            const texts = processedResult.draft_json_data.materials?.texts || [];
+            const matMap = {};
+            processedResult.blocks.forEach(b => {
+                if (b.mat_id) matMap[b.mat_id] = b.translated;
+            });
+
+            texts.forEach(item => {
+                if (item && item.id && matMap[item.id] !== undefined) {
+                    try {
+                        const cObj = typeof item.content === 'string' ? JSON.parse(item.content) : item.content;
+                        cObj.text = matMap[item.id];
+                        item.content = JSON.stringify(cObj);
+                    } catch (err) {}
+                }
+            });
+            processedResult.translated_json = JSON.stringify(processedResult.draft_json_data, null, 2);
+        }
+
+        // 3. Rebuild translated content for text
+        if (fmt === 'text') {
+            processedResult.translated_content = processedResult.blocks.map(b => b.translated).join('\n\n');
+        } else {
+            processedResult.translated_content = processedResult.translated_srt;
+        }
+
+        // 4. Update the Full/Document view
+        const fullTranslated = processedResult.translated_content || processedResult.translated_srt || '';
+        rawCodeBlock.textContent = fullTranslated;
+
+        // 5. Update stats
+        const rawTextStats = document.getElementById('raw-text-stats');
+        if (rawTextStats && fullTranslated) {
+            const wordCount = fullTranslated.trim().split(/\s+/).filter(Boolean).length;
+            const charCount = fullTranslated.length;
+            rawTextStats.textContent = `• ${wordCount} từ (${charCount} ký tự)`;
+        }
+    }
+
+    subtitlesTbody.addEventListener('input', (e) => {
+        const td = e.target.closest('.sub-trans[contenteditable="true"]');
+        if (!td || !processedResult || !processedResult.blocks) return;
+
+        const idx = parseInt(td.getAttribute('data-index'), 10);
+        if (isNaN(idx) || !processedResult.blocks[idx]) return;
+
+        const newText = td.innerText.trim();
+        processedResult.blocks[idx].translated = newText;
+        td.classList.add('edited-cell');
+
+        // Update row copy button data-text
+        const row = td.closest('tr');
+        if (row) {
+            const rowCopyBtn = row.querySelector('.btn-copy-row');
+            if (rowCopyBtn) rowCopyBtn.setAttribute('data-text', newText);
+        }
+
+        clearTimeout(editSyncTimer);
+        editSyncTimer = setTimeout(() => {
+            syncAllOutputsFromBlocks();
+            showSaveStatus();
+        }, 180);
+    });
+
+    // Subtle Download Draft Button (for CapCut PC)
+    if (downloadDraftBtn) {
+        downloadDraftBtn.addEventListener('click', () => {
+            if (!processedResult || !processedResult.translated_json) {
+                alert('Không tìm thấy dữ liệu CapCut JSON hợp lệ để tải về.');
+                return;
+            }
+            downloadFile('draft_content.json', processedResult.translated_json);
+
+            const origHtml = downloadDraftBtn.innerHTML;
+            downloadDraftBtn.innerHTML = '<i class="fa-solid fa-check"></i> Đã tải draft_content.json!';
+            setTimeout(() => {
+                downloadDraftBtn.innerHTML = origHtml;
+            }, 3000);
+        });
     }
 
 

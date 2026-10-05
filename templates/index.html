@@ -181,6 +181,7 @@
                         <div class="stats-pills">
                             <span class="pill"><i class="fa-solid fa-list-check"></i> <strong id="stat-count">0</strong> <span id="stat-unit">Mục</span></span>
                             <span class="pill" id="stat-format-pill"><i class="fa-solid fa-shapes"></i> <span id="stat-format">Văn bản</span></span>
+                            <span class="pill pill-save-status hidden" id="save-status"><i class="fa-solid fa-check"></i> Đã tự động lưu</span>
                         </div>
                         <div class="action-buttons">
                             <!-- NÚT COPY VĂN BẢN NỔI BẬT THEO YÊU CẦU -->
@@ -192,6 +193,10 @@
                             </button>
                             <button class="btn btn-secondary btn-sm" id="download-translated-btn">
                                 <i class="fa-solid fa-download"></i> <span id="download-translated-text">Tải Bản Dịch</span>
+                            </button>
+                            <!-- NÚT TẢI DRAFT CHO CAPCUT PC (THIẾT KẾ KHIÊM TỐN, KHÔNG QUÁ NỔI BẬT) -->
+                            <button class="btn btn-secondary btn-sm btn-subtle-draft hidden" id="download-draft-btn" title="Dành cho CapCut PC: Tải file đè thẳng vào thư mục dự án">
+                                <i class="fa-solid fa-folder-gear"></i> <span id="download-draft-text">Tải draft_content.json</span>
                             </button>
                         </div>
                     </div>
@@ -231,7 +236,7 @@
                                         <th style="width: 50px;">#</th>
                                         <th style="width: 140px;" id="th-position-label">Vị Trí / Thời Gian</th>
                                         <th>Gốc (Original)</th>
-                                        <th>Bản Dịch AI (<span id="preview-lang">Tiếng Việt</span>)</th>
+                                        <th>Bản Dịch AI (<span id="preview-lang">Tiếng Việt</span>) <span class="edit-badge-hint" title="Bạn có thể bấm trực tiếp vào ô để sửa chữ"><i class="fa-solid fa-pen-to-square"></i> Bấm để sửa</span></th>
                                         <th style="width: 70px; text-align: center;">Chép</th>
                                     </tr>
                                 </thead>

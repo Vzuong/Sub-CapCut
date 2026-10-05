@@ -131,6 +131,7 @@ class TranslationOrchestrator:
             updated_json = self.subtitle_agent.update_draft_json_with_translations(json_data, result.get("blocks", []))
             result["translated_json"] = json.dumps(updated_json, ensure_ascii=False, indent=2)
             result["original_content"] = json.dumps(json_data, ensure_ascii=False, indent=2)
+            result["draft_json_data"] = updated_json
             
         return result
 

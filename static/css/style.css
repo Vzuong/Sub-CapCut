@@ -1064,6 +1064,71 @@ select:focus, input[type="number"]:focus {
     font-weight: 500;
 }
 
+/* Inline Editing Styles */
+.sub-trans[contenteditable="true"] {
+    cursor: text;
+    border-radius: 6px;
+    padding: 6px 10px;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+}
+
+.sub-trans[contenteditable="true"]:hover {
+    background: rgba(0, 240, 255, 0.04);
+    border-color: rgba(0, 240, 255, 0.25);
+}
+
+.sub-trans[contenteditable="true"]:focus {
+    outline: none;
+    background: rgba(0, 240, 255, 0.08);
+    border-color: var(--color-cyan);
+    box-shadow: 0 0 14px rgba(0, 240, 255, 0.25);
+    color: #ffffff;
+}
+
+.sub-trans.edited-cell {
+    border-left: 2px solid var(--color-cyan) !important;
+}
+
+.edit-badge-hint {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--color-cyan);
+    background: rgba(0, 240, 255, 0.1);
+    border: 1px solid rgba(0, 240, 255, 0.25);
+    padding: 2px 7px;
+    border-radius: 12px;
+    margin-left: 6px;
+    text-transform: none;
+    letter-spacing: 0;
+    vertical-align: middle;
+}
+
+.pill-save-status {
+    background: rgba(16, 185, 129, 0.12) !important;
+    border-color: rgba(16, 185, 129, 0.4) !important;
+    color: #10b981 !important;
+    animation: fadeIn 0.2s ease;
+}
+
+/* Subtle CapCut Draft Download Button (Đơn giản, kín đáo) */
+.btn-subtle-draft {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border: 1px dashed rgba(0, 240, 255, 0.25) !important;
+    color: var(--color-muted) !important;
+    font-size: 11.5px !important;
+    font-weight: 500 !important;
+    padding: 7px 12px !important;
+    transition: var(--transition);
+}
+
+.btn-subtle-draft:hover {
+    background: rgba(0, 240, 255, 0.08) !important;
+    border-color: var(--color-cyan) !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
+}
+
 /* Raw Display & Formatting */
 .raw-display-wrapper {
     background: #06080d;

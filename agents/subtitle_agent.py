@@ -119,7 +119,7 @@ class SubtitleAgent:
                             start_time_micro = seg_start
                             end_time_micro = seg_start + seg_duration
                         
-                        subs.append((start_time_micro, end_time_micro, text_str))
+                        subs.append((start_time_micro, end_time_micro, text_str, mat_id))
                         
         subs.sort(key=lambda x: x[0])
         return subs
@@ -129,7 +129,10 @@ class SubtitleAgent:
         Builds raw SRT string from extracted subtitle tuples.
         """
         srt_lines = []
-        for i, (start, end, text) in enumerate(subs, 1):
+        for i, item in enumerate(subs, 1):
+            start = item[0]
+            end = item[1]
+            text = item[2]
             start_str = self.snap_to_frame(start, speed_multiplier)
             end_str = self.snap_to_frame(end, speed_multiplier)
             srt_lines.append(f"{i}\n{start_str} --> {end_str}\n{text}\n")
@@ -228,6 +231,7 @@ class SubtitleAgent:
     def update_draft_json_with_translations(self, data, translated_blocks):
         """
         Updates CapCut draft_content json dictionary in-place with translated texts.
+        Prioritizes exact mat_id matching with sequential fallback.
         """
         import copy
         if not data or not isinstance(data, dict):
@@ -237,6 +241,22 @@ class SubtitleAgent:
         texts_list = updated_data.get('materials', {}).get('texts', [])
         text_materials = {item['id']: item for item in texts_list if isinstance(item, dict) and 'id' in item}
 
+        # 1. First attempt: match by mat_id if available
+        mat_map = {b['mat_id']: b['translated'] for b in translated_blocks if b.get('mat_id')}
+        if mat_map:
+            for mat_id, trans_text in mat_map.items():
+                if mat_id in text_materials:
+                    mat_data = text_materials[mat_id]
+                    content_str = mat_data.get('content', '{}')
+                    try:
+                        text_content = json.loads(content_str) if isinstance(content_str, str) else content_str
+                        text_content['text'] = trans_text
+                        mat_data['content'] = json.dumps(text_content, ensure_ascii=False)
+                    except Exception:
+                        continue
+            return updated_data
+
+        # 2. Fallback: match by sequential text tracks
         block_idx = 0
         for track in updated_data.get('tracks', []):
             if track.get('type') == 'text':

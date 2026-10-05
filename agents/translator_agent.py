@@ -20,7 +20,8 @@ class TranslatorAgent:
         Helper method to process a single chunk of subtitles.
         """
         text_to_translate = ""
-        for i, (_, _, text) in enumerate(chunk_subs):
+        for i, item in enumerate(chunk_subs):
+            text = item[2]
             text_to_translate += f"[{i}] {text}\n"
 
         prompt = f"""
@@ -60,7 +61,12 @@ Văn bản cần dịch sang {target_lang}:
                     idx = int(match.group(1))
                     translated_dict[idx] = match.group(2)
 
-            for i, (start, end, original_text) in enumerate(chunk_subs):
+            for i, item in enumerate(chunk_subs):
+                start = item[0]
+                end = item[1]
+                original_text = item[2]
+                mat_id = item[3] if len(item) > 3 else None
+
                 global_i = start_idx + i + 1
                 start_str = self.subtitle_agent.snap_to_frame(start, speed_multiplier)
                 end_str = self.subtitle_agent.snap_to_frame(end, speed_multiplier)
@@ -71,12 +77,18 @@ Văn bản cần dịch sang {target_lang}:
                     "start": start_str,
                     "end": end_str,
                     "original": original_text,
-                    "translated": trans_text
+                    "translated": trans_text,
+                    "mat_id": mat_id
                 })
 
         except Exception as e:
             print(f"❌ Lỗi TranslatorAgent ở đợt {chunk_idx + 1}: {e}")
-            for i, (start, end, original_text) in enumerate(chunk_subs):
+            for i, item in enumerate(chunk_subs):
+                start = item[0]
+                end = item[1]
+                original_text = item[2]
+                mat_id = item[3] if len(item) > 3 else None
+
                 global_i = start_idx + i + 1
                 start_str = self.subtitle_agent.snap_to_frame(start, speed_multiplier)
                 end_str = self.subtitle_agent.snap_to_frame(end, speed_multiplier)
@@ -85,7 +97,8 @@ Văn bản cần dịch sang {target_lang}:
                     "start": start_str,
                     "end": end_str,
                     "original": original_text,
-                    "translated": original_text
+                    "translated": original_text,
+                    "mat_id": mat_id
                 })
 
         return chunk_idx, chunk_blocks
